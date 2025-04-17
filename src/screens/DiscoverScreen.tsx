@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, Dimensions, SafeAreaView } from 'react-native';
+import React, {useState} from 'react';
+import {View, Text, Dimensions, SafeAreaView} from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
-import { ArticleCard } from '@/components/ArticleCard';
-import { CategoryTabs } from '@/components/CategoryTabs';
+import {ArticleCard} from '@/components/ArticleCard';
+import {CategoryTabs} from '@/components/CategoryTabs';
 
-const { height, width } = Dimensions.get('window');
+const {height, width} = Dimensions.get('window');
 const CARD_HEIGHT = height * 0.82;
 
 const dummyArticles = [
@@ -29,8 +29,8 @@ export default function DiscoverScreen() {
     const filtered = dummyArticles.filter((a) => a.category === selected);
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-            <View style={{ paddingTop: 12 }}>
+        <SafeAreaView style={{flex: 1, backgroundColor: '#fff'}}>
+            <View style={{paddingTop: 12}}>
                 <Text
                     style={{
                         fontSize: 24,
@@ -42,7 +42,17 @@ export default function DiscoverScreen() {
                     Discover
                 </Text>
 
-                <View style={{ paddingLeft: 16, marginBottom: 12 }}>
+                <View
+                    style={{
+                        paddingLeft: 16,
+                        marginBottom: 12,
+                        backgroundColor: 'transparent', // ✅ View 자체를 완전히 투명하게
+                        position: 'absolute',           // ✅ 카드 위에 고정시키는 경우
+                        top: 64,                         // 카테고리 위치 조정 (타이틀 아래)
+                        zIndex: 10,                      // 카드보다 위에 있도록
+                        width: '100%',
+                    }}
+                >
                     <CategoryTabs selected={selected} onSelect={setSelected} />
                 </View>
             </View>
@@ -52,21 +62,22 @@ export default function DiscoverScreen() {
                 data={filtered}
                 height={CARD_HEIGHT}
                 width={width}
-                loop
                 pagingEnabled
                 mode="parallax"
+                loop={false}
                 modeConfig={{
                     parallaxScrollingScale: 0.9,
                     parallaxScrollingOffset: 150,
                 }}
-                renderItem={({ item }) => (
+                scrollAnimationDuration={200} // 300ms로 설정하여 빠른 스크롤
+                renderItem={({item}) => (
                     <View
                         style={{
                             height: CARD_HEIGHT,
                             justifyContent: 'center',
                         }}
                     >
-                        <ArticleCard article={item} />
+                        <ArticleCard article={item}/>
                     </View>
                 )}
             />
