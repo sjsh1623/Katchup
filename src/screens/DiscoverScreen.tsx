@@ -30,30 +30,18 @@ export default function DiscoverScreen() {
 
     return (
         <SafeAreaView style={{flex: 1, backgroundColor: '#fff'}}>
-            <View style={{paddingTop: 12}}>
-                <Text
-                    style={{
-                        fontSize: 24,
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        marginBottom: 10,
-                    }}
-                >
-                    Discover
-                </Text>
-
+            <View>
                 <View
                     style={{
                         paddingLeft: 16,
-                        marginBottom: 12,
-                        backgroundColor: 'transparent', // ✅ View 자체를 완전히 투명하게
-                        position: 'absolute',           // ✅ 카드 위에 고정시키는 경우
-                        top: 64,                         // 카테고리 위치 조정 (타이틀 아래)
-                        zIndex: 10,                      // 카드보다 위에 있도록
+                        backgroundColor: 'transparent',
+                        position: 'absolute',
+                        top: 20,
+                        zIndex: 10,
                         width: '100%',
                     }}
                 >
-                    <CategoryTabs selected={selected} onSelect={setSelected} />
+                    <CategoryTabs selected={selected} onSelect={setSelected}/>
                 </View>
             </View>
 
