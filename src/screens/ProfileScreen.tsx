@@ -1,6 +1,4 @@
-// src/screens/ProfileScreen.tsx
-
-import React, { useRef, useState } from 'react';
+import React, {useRef, useState} from 'react';
 import {
     View,
     Text,
@@ -10,37 +8,21 @@ import {
     FlatList,
     Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {Ionicons} from '@expo/vector-icons';
+import DraggableFlatList, {RenderItemParams} from 'react-native-draggable-flatlist';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
 const PAGE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING * 2;
 const ITEM_WIDTH = SCREEN_WIDTH;
 const PAGE_PADDING = 20;
 
 const routes = [
-    { key: 'threads', title: 'Threads' },
-    { key: 'replies', title: 'Replies' },
-    { key: 'media', title: 'Media' },
-    { key: 'reposts', title: 'Reposts' },
-    { key: 'feeds', title: 'Feeds' },
-];
-
-const threadCards = [
-    {
-        id: '1',
-        icon: 'create-outline',
-        title: 'Create thread',
-        desc: 'Say what’s on your mind or share a recent highlight.',
-        button: 'Create',
-    },
-    {
-        id: '2',
-        icon: 'camera-outline',
-        title: 'Add profile photo',
-        desc: 'Make it easier for people to recognize you.',
-        button: 'Add',
-    },
+    {key: 'threads', title: 'Threads'},
+    {key: 'replies', title: 'Replies'},
+    {key: 'media', title: 'Media'},
+    {key: 'reposts', title: 'Reposts'},
+    {key: 'feeds', title: 'Feeds'},
 ];
 
 const sampleReplies = [
@@ -61,36 +43,72 @@ const sampleReplies = [
     },
 ];
 
-const ThreadContent = () => (
-    <View style={styles.page}>
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Finish your profile</Text>
-            <Text style={styles.sectionCount}>3 left</Text>
-        </View>
-        <View style={styles.cardRow}>
-            {threadCards.map(card => (
-                <View key={card.id} style={styles.card}>
-                    <Ionicons name={card.icon} size={32} color="black" />
-                    <Text style={styles.cardTitle}>{card.title}</Text>
-                    <Text style={styles.cardDesc}>{card.desc}</Text>
-                    <TouchableOpacity style={styles.cardButton}>
-                        <Text style={styles.cardButtonText}>{card.button}</Text>
-                    </TouchableOpacity>
+const threadCardsInit = [
+    {
+        id: '1',
+        title: '키워드 1',
+        desc: '여기 뭔가 들어감',
+    },
+    {
+        id: '2',
+        title: '키워드 2',
+        desc: '여기 뭔가 들어감',
+    },
+    {
+        id: '3',
+        title: '키워드 3',
+        desc: '여기 뭔가 들어감',
+    },
+    {
+        id: '4',
+        title: '키워드 4',
+        desc: '여기 뭔가 들어감',
+    },
+];
+
+const ThreadContent = () => {
+    const [cards, setCards] = useState(threadCardsInit);
+    console.log(cards);
+    const renderItem = ({item, drag, isActive}: RenderItemParams<typeof threadCardsInit[0]>) => (
+        <View style={[styles.threadRow, isActive && {opacity: 0.8}]}>
+            <View style={styles.threadCard}>
+                <View>
+                    <Text style={styles.threadNumber}>{item.title}</Text>
+                    <Text style={styles.threadSub}>{item.desc}</Text>
                 </View>
-            ))}
+                <TouchableOpacity onLongPress={drag}>
+                    <Ionicons name="reorder-three-outline" size={24} color="#888"/>
+                </TouchableOpacity>
+            </View>
         </View>
-        <Text style={styles.emptyText}>No threads yet</Text>
-    </View>
-);
+    );
+
+    return (
+        <View style={styles.page}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{fontWeight: 'bold' }}>Your Katchup</Text>
+                <Text style={{ color: '#888' }}>{cards.length} Keywords</Text>
+            </View>
+            <DraggableFlatList
+                data={cards}
+                onDragEnd={({data}) => setCards(data)}
+                keyExtractor={item => item.id}
+                renderItem={renderItem}
+                contentContainerStyle={styles.threadList}
+                style={{height: '100%'}}
+            />
+        </View>
+    );
+};
 
 const RepliesContent = () => (
     <View style={styles.page}>
         {sampleReplies.map(reply => (
             <View key={reply.id} style={styles.replyItem}>
                 {reply.avatar ? (
-                    <Image source={{ uri: reply.avatar }} style={styles.replyAvatar} />
+                    <Image source={{uri: reply.avatar}} style={styles.replyAvatar}/>
                 ) : (
-                    <Ionicons name="person-circle-outline" size={36} color="#888" />
+                    <Ionicons name="person-circle-outline" size={36} color="#888"/>
                 )}
                 <View style={styles.replyBody}>
                     <View style={styles.replyHeader}>
@@ -120,18 +138,18 @@ const FeedsContent = () => (
     </View>
 );
 
-const renderContent = ({ item }: { item: typeof routes[0] }) => {
+const renderContent = ({item}: { item: typeof routes[0] }) => {
     switch (item.key) {
         case 'threads':
-            return <ThreadContent />;
+            return <ThreadContent/>;
         case 'replies':
-            return <RepliesContent />;
+            return <RepliesContent/>;
         case 'media':
-            return <MediaContent />;
+            return <MediaContent/>;
         case 'reposts':
-            return <RepostsContent />;
+            return <RepostsContent/>;
         case 'feeds':
-            return <FeedsContent />;
+            return <FeedsContent/>;
         default:
             return null;
     }
@@ -141,12 +159,12 @@ export default function ProfileScreen() {
     const [activeIndex, setActiveIndex] = useState(0);
     const flatRef = useRef<FlatList>(null);
 
-    const onViewRef = useRef(({ viewableItems }: any) => {
+    const onViewRef = useRef(({viewableItems}: any) => {
         if (viewableItems.length > 0) {
             setActiveIndex(viewableItems[0].index ?? 0);
         }
     });
-    const viewConfigRef = useRef({ viewAreaCoveragePercentThreshold: 50 });
+    const viewConfigRef = useRef({viewAreaCoveragePercentThreshold: 50});
 
     return (
         <View style={styles.container}>
@@ -158,7 +176,7 @@ export default function ProfileScreen() {
                     <Text style={styles.followers}>18 followers</Text>
                 </View>
                 <TouchableOpacity style={styles.followButton}>
-                    <Ionicons name="person-add" size={20} />
+                    <Ionicons name="person-add" size={20}/>
                 </TouchableOpacity>
             </View>
 
@@ -179,7 +197,7 @@ export default function ProfileScreen() {
                         key={route.key}
                         style={styles.tabButton}
                         onPress={() => {
-                            flatRef.current?.scrollToIndex({ index: idx, animated: true });
+                            flatRef.current?.scrollToIndex({index: idx, animated: true});
                         }}
                     >
                         <Text
@@ -195,7 +213,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Pager (패딩 상쇄 위해 래핑) */}
-            <View style={{ marginHorizontal: -HORIZONTAL_PADDING }}>
+            <View style={{marginHorizontal: -HORIZONTAL_PADDING}}>
                 <FlatList
                     ref={flatRef}
                     data={routes}
@@ -230,9 +248,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 12,
     },
-    name: { fontSize: 24, fontWeight: 'bold' },
-    username: { fontSize: 14, color: '#888' },
-    followers: { fontSize: 14, color: '#888', marginTop: 4 },
+    name: {fontSize: 24, fontWeight: 'bold'},
+    username: {fontSize: 14, color: '#888'},
+    followers: {fontSize: 14, color: '#888', marginTop: 4},
     followButton: {
         backgroundColor: '#eee',
         padding: 8,
@@ -272,7 +290,8 @@ const styles = StyleSheet.create({
     },
     page: {
         width: ITEM_WIDTH,
-        paddingTop: 16, paddingHorizontal: PAGE_PADDING,
+        paddingTop: 16,
+        paddingHorizontal: PAGE_PADDING,
     },
     pageText: {
         fontSize: 16,
@@ -283,8 +302,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 12,
     },
-    sectionTitle: { fontSize: 16, fontWeight: 'bold' },
-    sectionCount: { fontSize: 14, color: '#888' },
+    sectionTitle: {fontSize: 16, fontWeight: 'bold'},
+    sectionCount: {fontSize: 14, color: '#888'},
     cardRow: {
         width: ITEM_WIDTH - PAGE_PADDING * 2,
         flexDirection: 'row',
@@ -299,7 +318,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginHorizontal: 4,
     },
-    cardTitle: { fontWeight: 'bold', marginTop: 8 },
+    cardTitle: {fontWeight: 'bold', marginTop: 8},
     cardDesc: {
         fontSize: 12,
         color: '#555',
@@ -339,7 +358,44 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 4,
     },
-    replyName: { fontWeight: 'bold', fontSize: 14 },
-    replyDate: { fontSize: 12, color: '#888' },
-    replyText: { fontSize: 14, color: '#333' },
+    replyName: {fontWeight: 'bold', fontSize: 14},
+    replyDate: {fontSize: 12, color: '#888'},
+    replyText: {fontSize: 14, color: '#333'}, threadList: {
+        paddingVertical: 8,
+    },
+    threadRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 4,
+    },
+    threadCard: {
+        flex: 1,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    threadTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    threadSub: {
+        fontSize: 14,
+        color: '#888',
+        marginTop: 4,
+    },
+    threadNumber: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    dragHandle: {
+        marginLeft: 12,
+    },
 });
