@@ -8,6 +8,7 @@ import {
     FlatList,
     Image,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
 import DraggableFlatList, {RenderItemParams} from 'react-native-draggable-flatlist';
 
@@ -68,7 +69,6 @@ const threadCardsInit = [
 
 const ThreadContent = () => {
     const [cards, setCards] = useState(threadCardsInit);
-    console.log(cards);
     const renderItem = ({item, drag, isActive}: RenderItemParams<typeof threadCardsInit[0]>) => (
         <View style={[styles.threadRow, isActive && {opacity: 0.8}]}>
             <View style={styles.threadCard}>
@@ -84,10 +84,10 @@ const ThreadContent = () => {
     );
 
     return (
-        <View style={styles.page}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{fontWeight: 'bold' }}>Your Katchup</Text>
-                <Text style={{ color: '#888' }}>{cards.length} Keywords</Text>
+        <View style={[styles.page, {flex: 1, minHeight: 0}]}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8}}>
+                <Text style={{fontWeight: 'bold'}}>Your Katchup</Text>
+                <Text style={{color: '#888'}}>{cards.length} Keywords</Text>
             </View>
             <DraggableFlatList
                 data={cards}
@@ -167,71 +167,73 @@ export default function ProfileScreen() {
     const viewConfigRef = useRef({viewAreaCoveragePercentThreshold: 50});
 
     return (
-        <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.name}>Andrew Lim</Text>
-                    <Text style={styles.username}>sjsh1629</Text>
-                    <Text style={styles.followers}>18 followers</Text>
-                </View>
-                <TouchableOpacity style={styles.followButton}>
-                    <Ionicons name="person-add" size={20}/>
-                </TouchableOpacity>
-            </View>
-
-            {/* Actions */}
-            <View style={styles.actionRow}>
-                <TouchableOpacity style={styles.outlinedButton}>
-                    <Text>Edit profile</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.outlinedButton}>
-                    <Text>Share profile</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Tab Bar */}
-            <View style={styles.tabBar}>
-                {routes.map((route, idx) => (
-                    <TouchableOpacity
-                        key={route.key}
-                        style={styles.tabButton}
-                        onPress={() => {
-                            flatRef.current?.scrollToIndex({index: idx, animated: true});
-                        }}
-                    >
-                        <Text
-                            style={[
-                                styles.tabText,
-                                activeIndex === idx && styles.tabTextActive,
-                            ]}
-                        >
-                            {route.title}
-                        </Text>
+        <SafeAreaView style={{flex: 1, backgroundColor: '#fff'}}>
+            <View style={styles.container}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <View>
+                        <Text style={styles.name}>Andrew Lim</Text>
+                        <Text style={styles.username}>sjsh1629</Text>
+                        <Text style={styles.followers}>18 followers</Text>
+                    </View>
+                    <TouchableOpacity style={styles.followButton}>
+                        <Ionicons name="person-add" size={20}/>
                     </TouchableOpacity>
-                ))}
-            </View>
+                </View>
 
-            {/* Pager (패딩 상쇄 위해 래핑) */}
-            <View style={{marginHorizontal: -HORIZONTAL_PADDING}}>
-                <FlatList
-                    ref={flatRef}
-                    data={routes}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={item => item.key}
-                    renderItem={renderContent}
-                    onViewableItemsChanged={onViewRef.current}
-                    viewabilityConfig={viewConfigRef.current}
-                    getItemLayout={(_, index) => ({
-                        length: ITEM_WIDTH,
-                        offset: ITEM_WIDTH * index,
-                        index,
-                    })}
-                />
+                {/* Actions */}
+                <View style={styles.actionRow}>
+                    <TouchableOpacity style={styles.outlinedButton}>
+                        <Text>Edit profile</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.outlinedButton}>
+                        <Text>Share profile</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Tab Bar */}
+                <View style={styles.tabBar}>
+                    {routes.map((route, idx) => (
+                        <TouchableOpacity
+                            key={route.key}
+                            style={styles.tabButton}
+                            onPress={() => {
+                                flatRef.current?.scrollToIndex({index: idx, animated: true});
+                            }}
+                        >
+                            <Text
+                                style={[
+                                    styles.tabText,
+                                    activeIndex === idx && styles.tabTextActive,
+                                ]}
+                            >
+                                {route.title}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* Pager (패딩 상쇄 위해 래핑) */}
+                <View style={{marginHorizontal: -HORIZONTAL_PADDING}}>
+                    <FlatList
+                        ref={flatRef}
+                        data={routes}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={item => item.key}
+                        renderItem={renderContent}
+                        onViewableItemsChanged={onViewRef.current}
+                        viewabilityConfig={viewConfigRef.current}
+                        getItemLayout={(_, index) => ({
+                            length: ITEM_WIDTH,
+                            offset: ITEM_WIDTH * index,
+                            index,
+                        })}
+                    />
+                </View>
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 

@@ -13,6 +13,7 @@ export default function BottomTabNavigator() {
         <Tab.Navigator
             screenOptions={({route}) => ({
                 tabBarShowLabel: false,
+                headerShown: false,
                 tabBarStyle: {
                     position: 'absolute',
                     alignSelf: 'center',
