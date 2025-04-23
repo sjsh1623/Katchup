@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
     SafeAreaView,
     View,
@@ -14,31 +14,45 @@ import {Ionicons} from '@expo/vector-icons';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
+const TICKER_ITEM_HEIGHT = 28; // height of one ticker row
 
 interface TrendingItem {
-  rank: number;
-  title: string;
-  change: number | 'NEW';
+    rank: number;
+    title: string;
+    change: number | 'NEW';
 }
 
 const categoryData = ['정치', '경제', '사회', '생활/문화', 'IT/과학', '세계', '스포츠', '연예'];
 
 const sampleTrendingData: TrendingItem[] = [
-  { rank: 1, title: '이재명 선거법 전환행', change: 0 },
-  { rank: 2, title: '박형준의 링컨론', change: 1 },
-  { rank: 3, title: '이재명 영남 압승', change: 1 },
-  { rank: 4, title: '조용원 2개월째 잠적', change: 3 },
-  { rank: 5, title: '軍정찰위성 4호 발사', change: 0 },
-  { rank: 6, title: 'IMF 韓성장률 1%', change: 0 },
-  { rank: 7, title: 'AI로 진화하는 숏폼', change: 1 },
-  { rank: 8, title: '교황 선종 세계 추모', change: 'NEW' },
-  { rank: 9, title: '김경수의 연정 구상', change: 0 },
+    {rank: 1, title: '이재명 선거법 전환행', change: 0},
+    {rank: 2, title: '박형준의 링컨론', change: 1},
+    {rank: 3, title: '이재명 영남 압승', change: 1},
+    {rank: 4, title: '조용원 2개월째 잠적', change: 3},
+    {rank: 5, title: '軍정찰위성 4호 발사', change: 0},
+    {rank: 6, title: 'IMF 韓성장률 1%', change: 0},
+    {rank: 7, title: 'AI로 진화하는 숏폼', change: 1},
+    {rank: 8, title: '교황 선종 세계 추모', change: 'NEW'},
+    {rank: 9, title: '김경수의 연정 구상', change: 0},
 ];
 
 const HomeScreen = () => {
     const [activeTab, setActiveTab] = useState<'주요 뉴스' | '단독' | '오피니언'>('주요 뉴스');
-    const [collapsed, setCollapsed] = useState(false);
+    // Start collapsed so ticker shows by default
+    const [collapsed, setCollapsed] = useState(true);
+    const [tickerIndex, setTickerIndex] = useState(0);
+    const scrollRef = useRef<ScrollView>(null);
     const trendingData = sampleTrendingData;
+
+    useEffect(() => {
+      if (!collapsed) return;
+      const timer = setInterval(() => {
+        const next = (tickerIndex + 1) % trendingData.length;
+        scrollRef.current?.scrollTo({ y: next * TICKER_ITEM_HEIGHT, animated: true });
+        setTickerIndex(next);
+      }, 3000);
+      return () => clearInterval(timer);
+    }, [collapsed, tickerIndex]);
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -73,18 +87,42 @@ const HomeScreen = () => {
             {/* Body */}
             <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
                 {/* 1. 급상승 뉴스 */}
-                <View style={[styles.section, { marginBottom: 16 }]}>
-                    <TouchableOpacity
-                        style={styles.sectionHeader}
-                        onPress={() => setCollapsed(prev => !prev)}
-                    >
-                        <Text style={styles.sectionTitle}>급상승 뉴스</Text>
-                        <View style={styles.sectionRight}>
-                            <Text style={styles.sectionDate}>2025년 4월 22일 22:13 기준</Text>
-                            <Ionicons name={collapsed ? 'chevron-down' : 'chevron-up'} size={20} color="#666"/>
-                        </View>
-                    </TouchableOpacity>
+                <View style={[styles.section, {marginBottom: 16}]}>
                     {!collapsed && (
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>급상승 뉴스</Text>
+                            <View style={styles.sectionRight}>
+                                <Text style={styles.sectionDate}>2025년 4월 22일 22:13 기준</Text>
+                                <TouchableOpacity onPress={() => setCollapsed(true)}>
+                                    <Ionicons name="chevron-down" size={20} color="#666"/>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                    {collapsed ? (
+                        <View style={styles.tickerRow}>
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>실시간</Text>
+                            </View>
+                            <ScrollView
+                              ref={scrollRef}
+                              style={styles.tickerWrapper}
+                              scrollEnabled={false}
+                              showsVerticalScrollIndicator={false}
+                              contentContainerStyle={{}}
+                            >
+                              {trendingData.map(item => (
+                                <View key={item.rank} style={styles.tickerItem}>
+                                  <Text style={styles.trendRank}>{item.rank}.</Text>
+                                  <Text style={styles.trendTitle}>{item.title}</Text>
+                                </View>
+                              ))}
+                            </ScrollView>
+                            <TouchableOpacity onPress={() => setCollapsed(false)}>
+                                <Ionicons name="chevron-up" size={20} color="#666"/>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
                         <FlatList
                             data={trendingData}
                             keyExtractor={item => item.rank.toString()}
@@ -100,6 +138,7 @@ const HomeScreen = () => {
                                     )}
                                 </View>
                             )}
+                            ItemSeparatorComponent={() => <View style={styles.trendSeparator}/>}
                             scrollEnabled={false}
                         />
                     )}
@@ -156,12 +195,12 @@ const HomeScreen = () => {
                     {[1, 2, 3, 4, 5].map(idx => (
                         <TouchableOpacity key={idx} style={styles.newsRow}>
                             <Image
-                              source={{ uri: 'https://via.placeholder.com/80x50' }}
-                              style={styles.newsThumbnail}
+                                source={{uri: 'https://via.placeholder.com/80x50'}}
+                                style={styles.newsThumbnail}
                             />
                             <View style={styles.newsContent}>
-                              <Text style={styles.newsText}>이재명, '코스피 5000시대' 공약 발표</Text>
-                              <Text style={styles.newsTime}>2시간 전</Text>
+                                <Text style={styles.newsText}>이재명, '코스피 5000시대' 공약 발표</Text>
+                                <Text style={styles.newsTime}>2시간 전</Text>
                             </View>
                         </TouchableOpacity>
                     ))}
@@ -210,7 +249,7 @@ const styles = StyleSheet.create({
     body: {flex: 1},
 
     section: {paddingHorizontal: 16, marginTop: 16},
-    sectionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom : 14},
+    sectionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14},
     sectionTitle: {fontSize: 18, fontWeight: 'bold'},
     sectionRight: {flexDirection: 'row', alignItems: 'center'},
     sectionDate: {marginRight: 6, color: '#666'},
@@ -271,19 +310,19 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     newsThumbnail: {
-      width: 80,
-      height: 50,
-      borderRadius: 4,
-      marginRight: 12,
+        width: 80,
+        height: 50,
+        borderRadius: 4,
+        marginRight: 12,
     },
     newsContent: {
-      flex: 1,
-      justifyContent: 'center',
+        flex: 1,
+        justifyContent: 'center',
     },
     newsTime: {
-      fontSize: 12,
-      color: '#888',
-      marginTop: 4,
+        fontSize: 12,
+        color: '#888',
+        marginTop: 4,
     },
     newsText: {fontSize: 16, flex: 1},
 
@@ -298,4 +337,34 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     moreText: {fontSize: 16, marginRight: 4},
+    badge: {
+        backgroundColor: '#FFD966',
+        borderRadius: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        marginRight: 8,
+    },
+    badgeText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    tickerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        height: TICKER_ITEM_HEIGHT,
+    },
+    tickerWrapper: {
+        flex: 1,
+        height: TICKER_ITEM_HEIGHT,
+        overflow: 'hidden',
+        marginHorizontal: 8,
+    },
+    tickerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: TICKER_ITEM_HEIGHT,
+    },
 });
