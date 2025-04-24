@@ -9,8 +9,14 @@ import {
     ScrollView,
     Image,
     Dimensions,
+    Animated,
+    LayoutAnimation,
+    UIManager,
+    Platform,
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+
+const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -36,22 +42,70 @@ const sampleTrendingData: TrendingItem[] = [
     {rank: 9, title: '김경수의 연정 구상', change: 0},
 ];
 
+// For circular ticker: duplicate first item at the end
+const scrollData = [...sampleTrendingData, sampleTrendingData[0]];
+
 const HomeScreen = () => {
+    // Enable LayoutAnimation on Android
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
     const [activeTab, setActiveTab] = useState<'주요 뉴스' | '단독' | '오피니언'>('주요 뉴스');
     // Start collapsed so ticker shows by default
     const [collapsed, setCollapsed] = useState(true);
+    // Animated value: 0 = collapsed (down arrow), 1 = expanded (up arrow)
+    const rotateAnim = useRef(new Animated.Value(collapsed ? 0 : 1)).current;
+    const trendingData = sampleTrendingData;
+    // Slide container height: collapsed = one row, expanded = header + rows
+    const EXPANDED_HEIGHT = 200 + trendingData.length * TICKER_ITEM_HEIGHT;
+    const heightAnim = useRef(new Animated.Value(TICKER_ITEM_HEIGHT)).current;
+    const toggleCollapsed = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        const newCollapsed = !collapsed;
+        setCollapsed(newCollapsed);
+        Animated.timing(rotateAnim, {
+            // when collapsed = true, arrow down (0); when expanded = false, arrow up (1)
+            toValue: newCollapsed ? 0 : 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+        Animated.timing(heightAnim, {
+            // when collapsed, shrink to single ticker; when expanded, grow
+            toValue: newCollapsed ? TICKER_ITEM_HEIGHT : EXPANDED_HEIGHT,
+            duration: 150,
+            useNativeDriver: false,
+        }).start();
+    };
     const [tickerIndex, setTickerIndex] = useState(0);
     const scrollRef = useRef<ScrollView>(null);
-    const trendingData = sampleTrendingData;
 
     useEffect(() => {
-      if (!collapsed) return;
-      const timer = setInterval(() => {
-        const next = (tickerIndex + 1) % trendingData.length;
-        scrollRef.current?.scrollTo({ y: next * TICKER_ITEM_HEIGHT, animated: true });
-        setTickerIndex(next);
-      }, 3000);
-      return () => clearInterval(timer);
+        if (!collapsed) return;
+        const timer = setInterval(() => {
+            if (!scrollRef.current) return;
+            const isLast = tickerIndex === trendingData.length - 1;
+            if (!isLast) {
+                // scroll to next item
+                const next = tickerIndex + 1;
+                scrollRef.current.scrollTo({
+                    y: next * TICKER_ITEM_HEIGHT,
+                    animated: true,
+                });
+                setTickerIndex(next);
+            } else {
+                // scroll to duplicate first item
+                scrollRef.current.scrollTo({
+                    y: scrollData.length * TICKER_ITEM_HEIGHT - TICKER_ITEM_HEIGHT,
+                    animated: true,
+                });
+                // after animation, jump back to start without animation
+                setTimeout(() => {
+                    scrollRef.current?.scrollTo({y: 0, animated: false});
+                    setTickerIndex(0);
+                }, 300);
+            }
+        }, 3000);
+        return () => clearInterval(timer);
     }, [collapsed, tickerIndex]);
 
     return (
@@ -87,61 +141,72 @@ const HomeScreen = () => {
             {/* Body */}
             <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
                 {/* 1. 급상승 뉴스 */}
-                <View style={[styles.section, {marginBottom: 16}]}>
-                    {!collapsed && (
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>급상승 뉴스</Text>
-                            <View style={styles.sectionRight}>
-                                <Text style={styles.sectionDate}>2025년 4월 22일 22:13 기준</Text>
-                                <TouchableOpacity onPress={() => setCollapsed(true)}>
-                                    <Ionicons name="chevron-down" size={20} color="#666"/>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    )}
-                    {collapsed ? (
-                        <View style={styles.tickerRow}>
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>실시간</Text>
-                            </View>
-                            <ScrollView
-                              ref={scrollRef}
-                              style={styles.tickerWrapper}
-                              scrollEnabled={false}
-                              showsVerticalScrollIndicator={false}
-                              contentContainerStyle={{}}
-                            >
-                              {trendingData.map(item => (
-                                <View key={item.rank} style={styles.tickerItem}>
-                                  <Text style={styles.trendRank}>{item.rank}.</Text>
-                                  <Text style={styles.trendTitle}>{item.title}</Text>
+                <View style={[styles.section, {marginBottom: 16, position: 'relative'}]}>
+                    <Animated.View style={{height: heightAnim, overflow: 'hidden'}}>
+                        {collapsed ? (
+                            <View style={styles.tickerRow}>
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>실시간</Text>
                                 </View>
-                              ))}
-                            </ScrollView>
-                            <TouchableOpacity onPress={() => setCollapsed(false)}>
-                                <Ionicons name="chevron-up" size={20} color="#666"/>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <FlatList
-                            data={trendingData}
-                            keyExtractor={item => item.rank.toString()}
-                            renderItem={({item}) => (
-                                <View style={styles.trendRow}>
-                                    <Text style={styles.trendRank}>{item.rank}</Text>
-                                    <Text style={styles.trendTitle}>{item.title}</Text>
-                                    {typeof item.change === 'number' && item.change > 0 && (
-                                        <Text style={styles.trendChange}>↑{item.change}</Text>
-                                    )}
-                                    {item.change === 'NEW' && (
-                                        <Text style={styles.trendNew}>NEW</Text>
-                                    )}
+                                <ScrollView
+                                    ref={scrollRef}
+                                    style={styles.tickerWrapper}
+                                    scrollEnabled={false}
+                                    showsVerticalScrollIndicator={false}
+                                >
+                                    {scrollData.map((item, idx) => (
+                                        <View key={idx} style={styles.tickerItem}>
+                                            <Text style={styles.trendRank}>{item.rank}.</Text>
+                                            <Text style={styles.trendTitle}>{item.title}</Text>
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={styles.sectionHeader}>
+                                    {/* Show title only when expanded */}
+                                    <Text style={styles.sectionTitle}>급상승 뉴스</Text>
                                 </View>
-                            )}
-                            ItemSeparatorComponent={() => <View style={styles.trendSeparator}/>}
-                            scrollEnabled={false}
+                                <FlatList
+                                    data={trendingData}
+                                    keyExtractor={item => item.rank.toString()}
+                                    renderItem={({item}) => (
+                                        <View style={styles.trendRow}>
+                                            <Text style={styles.trendRank}>{item.rank}</Text>
+                                            <Text style={styles.trendTitle}>{item.title}</Text>
+                                            {typeof item.change === 'number' && item.change > 0 && (
+                                                <Text style={styles.trendChange}>↑{item.change}</Text>
+                                            )}
+                                            {item.change === 'NEW' && (
+                                                <Text style={styles.trendNew}>NEW</Text>
+                                            )}
+                                        </View>
+                                    )}
+                                    ItemSeparatorComponent={() => <View/>}
+                                    scrollEnabled={false}
+                                />
+                            </>
+                        )}
+                    </Animated.View>
+                    {/* Single rotating arrow, absolute at right center */}
+                    <TouchableOpacity onPress={toggleCollapsed} style={styles.arrowAbsolute}>
+                        <AnimatedIcon
+                            name="chevron-down"
+                            size={20}
+                            color="#666"
+                            style={{
+                                transform: [
+                                    {
+                                        rotate: rotateAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: ['0deg', '180deg'],
+                                        }),
+                                    },
+                                ],
+                            }}
                         />
-                    )}
+                    </TouchableOpacity>
                 </View>
 
                 {/* 3. 카테고리별 */}
@@ -249,20 +314,45 @@ const styles = StyleSheet.create({
     body: {flex: 1},
 
     section: {paddingHorizontal: 16, marginTop: 16},
-    sectionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14},
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
     sectionTitle: {fontSize: 18, fontWeight: 'bold'},
     sectionRight: {flexDirection: 'row', alignItems: 'center'},
-    sectionDate: {marginRight: 6, color: '#666'},
-
+    sectionDate: {
+        marginRight: 6,
+        fontSize: 14,
+        fontStyle: 'italic',
+        color: '#888',
+    },
     trendRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 6,
+        paddingVertical: 12,
     },
-    trendRank: {width: 24, fontSize: 16, fontWeight: 'bold'},
-    trendTitle: {flex: 1, fontSize: 16},
-    trendChange: {color: 'red', marginLeft: 8},
-    trendNew: {color: 'red', marginLeft: 8},
+    trendRank: {
+        fontSize: 20,
+        fontWeight: '600',
+        marginRight: 12,
+    },
+    trendTitle: {
+        flex: 1,
+        fontSize: 16,
+        color: '#333',
+    },
+    trendChange: {
+        fontSize: 14,               // 화살표 글자 크기
+        color: 'red',
+        marginLeft: 8,
+    },
+    trendNew: {
+        fontSize: 14,
+        color: 'red',
+        marginLeft: 8,
+    },
 
     breaking: {paddingHorizontal: 16, marginTop: 16},
     breakingLabel: {color: 'red', fontWeight: 'bold', marginBottom: 8},
@@ -338,33 +428,44 @@ const styles = StyleSheet.create({
     },
     moreText: {fontSize: 16, marginRight: 4},
     badge: {
-        backgroundColor: '#FFD966',
+        backgroundColor: '#FFF9E6',
         borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        marginRight: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        marginRight: 12,
     },
     badgeText: {
         fontSize: 12,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#555',
     },
     tickerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: 0,
         height: TICKER_ITEM_HEIGHT,
+    },
+    arrowButton: {
+        paddingHorizontal: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     tickerWrapper: {
         flex: 1,
         height: TICKER_ITEM_HEIGHT,
         overflow: 'hidden',
-        marginHorizontal: 8,
+        marginHorizontal: 0,
     },
     tickerItem: {
         flexDirection: 'row',
         alignItems: 'center',
         height: TICKER_ITEM_HEIGHT,
+    },
+    arrowAbsolute: {
+        position: 'absolute',
+        right: 16,
+        top: TICKER_ITEM_HEIGHT / 2,
+        marginTop: -10,
     },
 });
