@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useRef} from 'react';
+import {useNavigation} from '@react-navigation/native';
 import {
     SafeAreaView,
     View,
@@ -28,8 +29,6 @@ interface TrendingItem {
     change: number | 'NEW';
 }
 
-const categoryData = ['정치', '경제', '사회', '생활/문화', 'IT/과학', '세계', '스포츠', '연예'];
-
 const sampleTrendingData: TrendingItem[] = [
     {rank: 1, title: '이재명 선거법 전환행', change: 0},
     {rank: 2, title: '박형준의 링컨론', change: 1},
@@ -42,16 +41,26 @@ const sampleTrendingData: TrendingItem[] = [
     {rank: 9, title: '김경수의 연정 구상', change: 0},
 ];
 
+
 // For circular ticker: duplicate first item at the end
 const scrollData = [...sampleTrendingData, sampleTrendingData[0]];
 
+// --- Katchup Logo Font Size Example ---
+// If you render a logo like:
+//   <Text style={{fontSize: k_height, fontWeight: 'bold'}}>K</Text>
+//   <Text style={{fontSize: atchup_font_size}}>atchup.</Text>
+// The below calculation determines the font size for "atchup."
+// Change: atchup_font_size = int(k_height * 0.7)  -->  atchup_font_size = int(k_height * 0.75)
+// Example:
+//   const k_height = 40;
+//   const atchup_font_size = Math.round(k_height * 0.75); // was 0.7, now 0.75
+
 const HomeScreen = () => {
+    const navigation = useNavigation();
     // Enable LayoutAnimation on Android
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
     }
-    const [activeTab, setActiveTab] = useState<'주요 뉴스' | '단독' | '오피니언'>('주요 뉴스');
-    // Start collapsed so ticker shows by default
     const [collapsed, setCollapsed] = useState(true);
     // Animated value: 0 = collapsed (down arrow), 1 = expanded (up arrow)
     const rotateAnim = useRef(new Animated.Value(collapsed ? 0 : 1)).current;
@@ -112,34 +121,24 @@ const HomeScreen = () => {
         <SafeAreaView style={styles.safe}>
             {/* Header */}
             <View style={styles.header}>
+                <Image
+                    source={require('@/../assets/home-icon.png')}   // 프로젝트 내 로고 파일 경로
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
                 <View style={styles.headerIcons}>
-                    <TouchableOpacity>
-                        <Ionicons name="search" size={24} color="#000"/>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={{marginLeft: 20}}>
+                    <TouchableOpacity style={{marginLeft: 20}} onPress={() => navigation.navigate('AlarmScreen')}>
                         <Ionicons name="notifications-outline" size={24} color="#000"/>
                     </TouchableOpacity>
                 </View>
             </View>
 
-            {/* Top Tabs */}
-            <View style={styles.tabs}>
-                {['주요 뉴스', '단독', '오피니언'].map(tab => (
-                    <TouchableOpacity
-                        key={tab}
-                        style={styles.tabButton}
-                        onPress={() => setActiveTab(tab as any)}
-                    >
-                        <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                            {tab}
-                        </Text>
-                        {activeTab === tab && <View style={styles.tabIndicator}/>}
-                    </TouchableOpacity>
-                ))}
-            </View>
-
             {/* Body */}
-            <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.body}
+                contentContainerStyle={{flexGrow: 1, paddingBottom: 50}}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* 1. 급상승 뉴스 */}
                 <View style={[styles.section, {marginBottom: 16, position: 'relative'}]}>
                     <Animated.View style={{height: heightAnim, overflow: 'hidden'}}>
@@ -209,73 +208,67 @@ const HomeScreen = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* 3. 카테고리별 */}
+                {/* 최신 뉴스 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>카테고리별</Text>
-                        <TouchableOpacity>
-                            <Ionicons name="settings-outline" size={20} color="#000"/>
-                        </TouchableOpacity>
+                        <Text style={styles.sectionTitle}>최신 뉴스</Text>
                     </View>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryList}
-                    >
-                        {categoryData.map(cat => (
-                            <TouchableOpacity
-                                key={cat}
-                                style={[
-                                    styles.categoryButton,
-                                    cat === '세계' && styles.categoryButtonActive,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.categoryText,
-                                        cat === '세계' && styles.categoryTextActive,
-                                    ]}
-                                >
-                                    {cat}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                {/* 4. 뉴스 리스트 */}
-                <View style={styles.newsList}>
-                    {/** 대표 카드 하나 */}
-                    <View style={styles.largeCard}>
+                    {/* 대형 카드 */}
+                    <View style={styles.latestLargeCard}>
                         <Image
-                            source={{uri: 'https://via.placeholder.com/350x150'}}
-                            style={styles.largeImage}
+                            source={{uri: 'https://picsum.photos/500/500'}}
+                            style={styles.latestLargeImage}
                         />
-                        <Text style={styles.largeTitle}>
-                            프란치스코 교황이 부활절 미사 다음날 선종, 의료진 만류에도…
+                        <Text style={styles.latestLargeTitle}>
+                            이창용 한은 총재가 미중 관세협상 실패 시 글로벌 경제 비용이 막대할 것이라고 경고하며 신속한 해결을 촉구
                         </Text>
-                        <Text style={styles.largeTime}>3시간 전</Text>
-                    </View>
-                    {/** 일반 리스트 아이템 */}
-                    {[1, 2, 3, 4, 5].map(idx => (
-                        <TouchableOpacity key={idx} style={styles.newsRow}>
-                            <Image
-                                source={{uri: 'https://via.placeholder.com/80x50'}}
-                                style={styles.newsThumbnail}
-                            />
-                            <View style={styles.newsContent}>
-                                <Text style={styles.newsText}>이재명, '코스피 5000시대' 공약 발표</Text>
-                                <Text style={styles.newsTime}>2시간 전</Text>
+                        <View style={styles.latestLargeMeta}>
+                            <Text style={styles.latestMetaTime}>1시간 전</Text>
+                            <View style={styles.latestMetaIcons}>
+                                <Ionicons name="flag-outline" size={16} color="#888"/>
+                                <Text style={styles.latestMetaText}>40</Text>
+                                <Ionicons name="chatbubble-outline" size={16} color="#888" style={{marginLeft: 16}}/>
+                                <Text style={styles.latestMetaText}>28</Text>
+                                <Ionicons name="ellipsis-horizontal" size={16} color="#888" style={{marginLeft: 16}}/>
                             </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                        </View>
+                    </View>
+                    {/* 일반 행 */}
+                    <TouchableOpacity style={styles.latestRow}
+                                      onPress={() => navigation.navigate('DetailScreen')}>
+                        <View style={styles.latestRowContent}>
+                            <Text style={styles.latestRowTitle}>
+                                서울고검이 김건희 여사의 도이치모터스 주가조작 의혹에 대해 재수사에 착수하며 관련자 전면 조사에 나선다
+                            </Text>
+                            <Text style={styles.latestRowTime}>19시간 전</Text>
+                        </View>
+                        <Image
+                            source={{uri: 'https://picsum.photos/80/80'}}
+                            style={styles.latestRowImage}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.latestRow}
+                                      onPress={() => navigation.navigate('DetailScreen')}
+                    >
+                        <View style={styles.latestRowContent}>
+                            <Text style={styles.latestRowTitle}>
+                                서울고검이 김건희 여사의 도이치모터스 주가조작 의혹에 대해 재수사에 착수하며 관련자 전면 조사에 나선다
+                            </Text>
+                            <Text style={styles.latestRowTime}>23시간 전</Text>
+                        </View>
+                        <Image
+                            source={{uri: 'https://picsum.photos/80/80?2'}}
+                            style={styles.latestRowImage}
+                        />
+                    </TouchableOpacity>
 
-                {/* 5. 카테고리별 더보기 버튼 */}
-                <TouchableOpacity style={styles.moreButton}>
-                    <Text style={styles.moreText}>카테고리별 더보기</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#000"/>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.moreButton}
+                        onPress={() => navigation.navigate('MoreFeedScreen')}
+                    >
+                        <Text style={styles.moreText}>추천 뉴스 더보기</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
@@ -291,7 +284,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         height: 56,
     },
-    logo: {fontSize: 24, fontWeight: 'bold'},
+    logo: {
+        width: 120,   // 원하는 크기로 조절
+        height: 35,
+    },
     headerIcons: {flex: 1, flexDirection: 'row', justifyContent: 'flex-end'},
 
     tabs: {
@@ -312,7 +308,6 @@ const styles = StyleSheet.create({
     },
 
     body: {flex: 1},
-
     section: {paddingHorizontal: 16, marginTop: 16},
     sectionHeader: {
         flexDirection: 'row',
@@ -468,4 +463,77 @@ const styles = StyleSheet.create({
         top: TICKER_ITEM_HEIGHT / 2,
         marginTop: -10,
     },
+    latestLargeCard: {
+        marginTop: 8,
+        marginBottom: 20,
+        backgroundColor: '#fff',
+        overflow: 'hidden',
+    },
+    latestLargeImage: {
+        width: '100%',
+        height: SCREEN_WIDTH * 0.55,
+        borderRadius: 7,
+    },
+    latestLargeTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginHorizontal: 10,
+        marginTop: 12,
+        marginBottom: 0,
+        color: '#111',
+    },
+    latestLargeMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        paddingBottom: 0,
+        marginBottom: 0,
+    },
+    latestMetaTime: {
+        fontSize: 12,
+        color: '#888',
+    },
+    latestMetaIcons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    latestMetaText: {
+        fontSize: 12,
+        color: '#888',
+        marginLeft: 8,
+    },
+    latestRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingVertical: 25,
+        paddingHorizontal: 12,
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        borderRadius: 7,
+        height: 150,
+        borderTopWidth: 1,
+        borderColor: "#ECECEC"
+    },
+    latestRowContent: {
+        flex: 1,
+        marginRight: 12,
+        height: '100%',            // fill the row height
+        justifyContent: 'space-between',  // title top, time bottom
+    },
+    latestRowTitle: {
+        fontSize: 16,
+        color: '#333',
+        lineHeight: 22,
+    },
+    latestRowTime: {
+        fontSize: 12,
+        color: '#888',
+    },
+    latestRowImage: {
+        width: 95,
+        height: 95,
+        borderRadius: 8,
+    }
 });
