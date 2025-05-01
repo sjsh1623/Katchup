@@ -41,9 +41,20 @@ const sampleTrendingData: TrendingItem[] = [
     {rank: 9, title: '김경수의 연정 구상', change: 0},
 ];
 
-
-// For circular ticker: duplicate first item at the end
-const scrollData = [...sampleTrendingData, sampleTrendingData[0]];
+// 캐치업 전용 트렌딩 데이터
+const sampleCatchupTrendingData: TrendingItem[] = [
+    {rank: 1, title: '국정감사 현장 돌입', change: 2},
+    {rank: 2, title: '신규 스타트업 지원 확대', change: 'NEW'},
+    {rank: 3, title: '세계 경제 성장률 전망 상향', change: 1},
+    {rank: 4, title: '메타버스 기술 발전 동향', change: 0},
+    {rank: 5, title: '환경 규제 강화 입법 추진', change: 3},
+    {rank: 6, title: '유럽연합, 탄소국경조정제 시행', change: 1},
+    {rank: 7, title: '차세대 배터리 기술 공개', change: 'NEW'},
+    {rank: 8, title: '글로벌 반도체 공급망 변화', change: 0},
+    {rank: 9, title: '우주개발 민간 진출 가속화', change: 2},
+];
+const scrollDataNews = [...sampleTrendingData, sampleTrendingData[0]];
+const scrollDataCatchup = [...sampleCatchupTrendingData, sampleCatchupTrendingData[0]];
 
 // --- Katchup Logo Font Size Example ---
 // If you render a logo like:
@@ -55,44 +66,133 @@ const scrollData = [...sampleTrendingData, sampleTrendingData[0]];
 //   const k_height = 40;
 //   const atchup_font_size = Math.round(k_height * 0.75); // was 0.7, now 0.75
 
+// 샘플 데이터 (최신 뉴스)
+const latestData = [
+    {id: '1', title: '이창용 총재, 관세협상 실패 시 경제 비용 경고', time: '1시간 전', imageUrl: 'https://picsum.photos/seed/1/100/80'},
+    {id: '2', title: '서울고검, 도이치모터스 의혹 재수사 착수', time: '19시간 전', imageUrl: 'https://picsum.photos/seed/2/100/80'},
+    {id: '3', title: '김건희 여사 주가조작 의혹 전면 조사', time: '23시간 전', imageUrl: 'https://picsum.photos/seed/3/100/80'},
+    {id: '4', title: '국회, 예산안 심의 본격화', time: '1일 전', imageUrl: 'https://picsum.photos/seed/4/100/80'},
+];
+// 샘플 데이터 (캐치업)
+const catchupData = [
+    {id: 'c1', title: '단독: 새로운 정책 발표 요약', time: '2시간 전', imageUrl: 'https://picsum.photos/seed/c1/100/80'},
+    {id: 'c2', title: 'AI 챗봇 최신 기능 소개', time: '5시간 전', imageUrl: 'https://picsum.photos/seed/c2/100/80'},
+    {id: 'c3', title: '국제 유가 동향 분석', time: '6시간 전', imageUrl: 'https://picsum.photos/seed/c3/100/80'},
+    {id: 'c4', title: '글로벌 공급망 이슈 정리', time: '7시간 전', imageUrl: 'https://picsum.photos/seed/c4/100/80'},
+];
+
+// 공통 피드 섹션 렌더러
+const renderFeedSection = (
+    navigation: any,
+    title: string,
+    data: { id: string; title: string; time: string; imageUrl: string }[],
+    showMore: boolean,
+    onPressMore?: () => void,
+    moreLabel: string = '더보기',
+) => (
+    <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        {/* 대형 카드 */}
+        {data[0] && (
+            <TouchableOpacity
+                style={styles.latestLargeCard}
+                onPress={() => navigation.navigate('DetailScreen')}
+            >
+                <Image source={{uri: data[0].imageUrl}} style={styles.latestLargeImage}/>
+                <Text style={styles.latestLargeTitle} numberOfLines={2}>
+                    {data[0].title}
+                </Text>
+                <View style={styles.latestLargeMeta}>
+                    <Text style={styles.latestMetaTime}>{data[0].time}</Text>
+                    <View style={styles.latestMetaIcons}>
+                        <Ionicons name="ellipsis-horizontal" size={16} color="#888"/>
+                    </View>
+                </View>
+            </TouchableOpacity>
+        )}
+        {/* 일반 행 */}
+        {data.slice(1).map(item => (
+            <TouchableOpacity
+                key={item.id}
+                style={styles.latestRow}
+                onPress={() => navigation.navigate('DetailScreen')}
+            >
+                <View style={styles.latestRowContent}>
+                    <Text style={styles.latestRowTitle} numberOfLines={2}>
+                        {item.title}
+                    </Text>
+                    <Text style={styles.latestRowTime}>{item.time}</Text>
+                </View>
+                <Image source={{uri: item.imageUrl}} style={styles.latestRowImage}/>
+            </TouchableOpacity>
+        ))}
+        {/* 더보기 버튼 */}
+        {showMore && onPressMore && (
+            <TouchableOpacity style={styles.moreButton} onPress={onPressMore}>
+                <Text style={styles.moreText}>{moreLabel}</Text>
+            </TouchableOpacity>
+        )}
+    </View>
+);
+
 const HomeScreen = () => {
     const navigation = useNavigation();
     // Enable LayoutAnimation on Android
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
     }
-    const [collapsed, setCollapsed] = useState(true);
-    // Animated value: 0 = collapsed (down arrow), 1 = expanded (up arrow)
-    const rotateAnim = useRef(new Animated.Value(collapsed ? 0 : 1)).current;
-    const trendingData = sampleTrendingData;
-    // Slide container height: collapsed = one row, expanded = header + rows
-    const EXPANDED_HEIGHT = 200 + trendingData.length * TICKER_ITEM_HEIGHT;
-    const heightAnim = useRef(new Animated.Value(TICKER_ITEM_HEIGHT)).current;
-    const toggleCollapsed = () => {
+    const [activeTab, setActiveTab] = useState<'새로운 소식' | '캐치업'>('새로운 소식');
+    // Split collapse state for each tab
+    const [collapsedNews, setCollapsedNews] = useState(true);
+    const [collapsedCatchup, setCollapsedCatchup] = useState(true);
+    // Animated values for each tab
+    const rotateAnimNews = useRef(new Animated.Value(collapsedNews ? 0 : 1)).current;
+    const heightAnimNews = useRef(new Animated.Value(TICKER_ITEM_HEIGHT)).current;
+    const rotateAnimCatchup = useRef(new Animated.Value(collapsedCatchup ? 0 : 1)).current;
+    const heightAnimCatchup = useRef(new Animated.Value(TICKER_ITEM_HEIGHT)).current;
+    // ticker index and scrollRef shared (could be split if needed)
+    const [tickerIndex, setTickerIndex] = useState(0);
+    const scrollRef = useRef<ScrollView>(null);
+
+    const toggleNews = () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        const newCollapsed = !collapsed;
-        setCollapsed(newCollapsed);
-        Animated.timing(rotateAnim, {
-            // when collapsed = true, arrow down (0); when expanded = false, arrow up (1)
-            toValue: newCollapsed ? 0 : 1,
+        const next = !collapsedNews;
+        setCollapsedNews(next);
+        Animated.timing(rotateAnimNews, {
+            toValue: next ? 0 : 1,
             duration: 300,
             useNativeDriver: true,
         }).start();
-        Animated.timing(heightAnim, {
-            // when collapsed, shrink to single ticker; when expanded, grow
-            toValue: newCollapsed ? TICKER_ITEM_HEIGHT : EXPANDED_HEIGHT,
+        Animated.timing(heightAnimNews, {
+            toValue: next ? TICKER_ITEM_HEIGHT : TICKER_ITEM_HEIGHT * (sampleTrendingData.length + 7),
             duration: 150,
             useNativeDriver: false,
         }).start();
     };
-    const [tickerIndex, setTickerIndex] = useState(0);
-    const scrollRef = useRef<ScrollView>(null);
+    const toggleCatchup = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        const next = !collapsedCatchup;
+        setCollapsedCatchup(next);
+        Animated.timing(rotateAnimCatchup, {
+            toValue: next ? 0 : 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+        Animated.timing(heightAnimCatchup, {
+            toValue: next ? TICKER_ITEM_HEIGHT : TICKER_ITEM_HEIGHT * (sampleCatchupTrendingData.length + 7),
+            duration: 150,
+            useNativeDriver: false,
+        }).start();
+    };
 
+    // 기존 뉴스 자동 스크롤
     useEffect(() => {
-        if (!collapsed) return;
+        if (!collapsedNews) return;
         const timer = setInterval(() => {
             if (!scrollRef.current) return;
-            const isLast = tickerIndex === trendingData.length - 1;
+            const isLast = tickerIndex === sampleTrendingData.length - 1;
             if (!isLast) {
                 // scroll to next item
                 const next = tickerIndex + 1;
@@ -104,7 +204,7 @@ const HomeScreen = () => {
             } else {
                 // scroll to duplicate first item
                 scrollRef.current.scrollTo({
-                    y: scrollData.length * TICKER_ITEM_HEIGHT - TICKER_ITEM_HEIGHT,
+                    y: scrollDataNews.length * TICKER_ITEM_HEIGHT - TICKER_ITEM_HEIGHT,
                     animated: true,
                 });
                 // after animation, jump back to start without animation
@@ -115,7 +215,20 @@ const HomeScreen = () => {
             }
         }, 3000);
         return () => clearInterval(timer);
-    }, [collapsed, tickerIndex]);
+    }, [collapsedNews, tickerIndex]);
+
+    // 캐치업 자동 스크롤
+    useEffect(() => {
+        if (!collapsedCatchup) return;
+        const timer = setInterval(() => {
+            if (!scrollRef.current) return;
+            const isLast = tickerIndex === sampleCatchupTrendingData.length - 1;
+            const next = isLast ? 0 : tickerIndex + 1;
+            scrollRef.current.scrollTo({y: next * TICKER_ITEM_HEIGHT, animated: true});
+            setTickerIndex(next);
+        }, 3000);
+        return () => clearInterval(timer);
+    }, [collapsedCatchup, tickerIndex]);
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -133,143 +246,189 @@ const HomeScreen = () => {
                 </View>
             </View>
 
-            {/* Body */}
-            <ScrollView
-                style={styles.body}
-                contentContainerStyle={{flexGrow: 1, paddingBottom: 50}}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* 1. 급상승 뉴스 */}
-                <View style={[styles.section, {marginBottom: 16, position: 'relative'}]}>
-                    <Animated.View style={{height: heightAnim, overflow: 'hidden'}}>
-                        {collapsed ? (
-                            <View style={styles.tickerRow}>
-                                <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>실시간</Text>
-                                </View>
-                                <ScrollView
-                                    ref={scrollRef}
-                                    style={styles.tickerWrapper}
-                                    scrollEnabled={false}
-                                    showsVerticalScrollIndicator={false}
-                                >
-                                    {scrollData.map((item, idx) => (
-                                        <View key={idx} style={styles.tickerItem}>
-                                            <Text style={styles.trendRank}>{item.rank}.</Text>
-                                            <Text style={styles.trendTitle}>{item.title}</Text>
-                                        </View>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        ) : (
-                            <>
-                                <View style={styles.sectionHeader}>
-                                    {/* Show title only when expanded */}
-                                    <Text style={styles.sectionTitle}>급상승 뉴스</Text>
-                                </View>
-                                <FlatList
-                                    data={trendingData}
-                                    keyExtractor={item => item.rank.toString()}
-                                    renderItem={({item}) => (
-                                        <View style={styles.trendRow}>
-                                            <Text style={styles.trendRank}>{item.rank}</Text>
-                                            <Text style={styles.trendTitle}>{item.title}</Text>
-                                            {typeof item.change === 'number' && item.change > 0 && (
-                                                <Text style={styles.trendChange}>↑{item.change}</Text>
-                                            )}
-                                            {item.change === 'NEW' && (
-                                                <Text style={styles.trendNew}>NEW</Text>
-                                            )}
-                                        </View>
-                                    )}
-                                    ItemSeparatorComponent={() => <View/>}
-                                    scrollEnabled={false}
-                                />
-                            </>
-                        )}
-                    </Animated.View>
-                    {/* Single rotating arrow, absolute at right center */}
-                    <TouchableOpacity onPress={toggleCollapsed} style={styles.arrowAbsolute}>
-                        <AnimatedIcon
-                            name="chevron-down"
-                            size={20}
-                            color="#666"
-                            style={{
-                                transform: [
-                                    {
-                                        rotate: rotateAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: ['0deg', '180deg'],
-                                        }),
-                                    },
-                                ],
-                            }}
-                        />
-                    </TouchableOpacity>
-                </View>
-
-                {/* 최신 뉴스 */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>최신 뉴스</Text>
-                    </View>
-                    {/* 대형 카드 */}
-                    <View style={styles.latestLargeCard}>
-                        <Image
-                            source={{uri: 'https://picsum.photos/500/500'}}
-                            style={styles.latestLargeImage}
-                        />
-                        <Text style={styles.latestLargeTitle}>
-                            이창용 한은 총재가 미중 관세협상 실패 시 글로벌 경제 비용이 막대할 것이라고 경고하며 신속한 해결을 촉구
-                        </Text>
-                        <View style={styles.latestLargeMeta}>
-                            <Text style={styles.latestMetaTime}>1시간 전</Text>
-                            <View style={styles.latestMetaIcons}>
-                                <Ionicons name="flag-outline" size={16} color="#888"/>
-                                <Text style={styles.latestMetaText}>40</Text>
-                                <Ionicons name="chatbubble-outline" size={16} color="#888" style={{marginLeft: 16}}/>
-                                <Text style={styles.latestMetaText}>28</Text>
-                                <Ionicons name="ellipsis-horizontal" size={16} color="#888" style={{marginLeft: 16}}/>
-                            </View>
-                        </View>
-                    </View>
-                    {/* 일반 행 */}
-                    <TouchableOpacity style={styles.latestRow}
-                                      onPress={() => navigation.navigate('DetailScreen')}>
-                        <View style={styles.latestRowContent}>
-                            <Text style={styles.latestRowTitle}>
-                                서울고검이 김건희 여사의 도이치모터스 주가조작 의혹에 대해 재수사에 착수하며 관련자 전면 조사에 나선다
-                            </Text>
-                            <Text style={styles.latestRowTime}>19시간 전</Text>
-                        </View>
-                        <Image
-                            source={{uri: 'https://picsum.photos/80/80'}}
-                            style={styles.latestRowImage}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.latestRow}
-                                      onPress={() => navigation.navigate('DetailScreen')}
-                    >
-                        <View style={styles.latestRowContent}>
-                            <Text style={styles.latestRowTitle}>
-                                서울고검이 김건희 여사의 도이치모터스 주가조작 의혹에 대해 재수사에 착수하며 관련자 전면 조사에 나선다
-                            </Text>
-                            <Text style={styles.latestRowTime}>23시간 전</Text>
-                        </View>
-                        <Image
-                            source={{uri: 'https://picsum.photos/80/80?2'}}
-                            style={styles.latestRowImage}
-                        />
-                    </TouchableOpacity>
-
+            <View style={styles.tabs}>
+                {['새로운 소식', '캐치업'].map(tab => (
                     <TouchableOpacity
-                        style={styles.moreButton}
-                        onPress={() => navigation.navigate('MoreFeedScreen')}
+                        key={tab}
+                        style={styles.tabButton}
+                        onPress={() => setActiveTab(tab as any)}
                     >
-                        <Text style={styles.moreText}>추천 뉴스 더보기</Text>
+                        <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                            {tab}
+                        </Text>
+                        {activeTab === tab && <View style={styles.tabIndicator}/>}
                     </TouchableOpacity>
-                </View>
-            </ScrollView>
+                ))}
+            </View>
+
+            {/* Body */}
+            {activeTab === '새로운 소식' && (
+                <ScrollView
+                    style={styles.body}
+                    contentContainerStyle={{flexGrow: 1, paddingBottom: 50}}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* 1. 급상승 뉴스 */}
+                    <View style={[styles.section, {marginBottom: 16, position: 'relative'}]}>
+                        <Animated.View style={{height: heightAnimNews, overflow: 'hidden'}}>
+                            {collapsedNews ? (
+                                <View style={styles.tickerRow}>
+                                    {/* existing tickerRow contents */}
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>실시간</Text>
+                                    </View>
+                                    <ScrollView
+                                        ref={scrollRef}
+                                        style={styles.tickerWrapper}
+                                        scrollEnabled={false}
+                                        showsVerticalScrollIndicator={false}
+                                    >
+                                        {scrollDataNews.map((item, idx) => (
+                                            <View key={idx} style={styles.tickerItem}>
+                                                <Text style={styles.trendRank}>{item.rank}.</Text>
+                                                <Text style={styles.trendTitle}>{item.title}</Text>
+                                            </View>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            ) : (
+                                <>
+                                    <View style={styles.sectionHeader}>
+                                        <Text style={styles.sectionTitle}>급상승 뉴스</Text>
+                                    </View>
+                                    <FlatList
+                                        data={sampleTrendingData}
+                                        keyExtractor={item => item.rank.toString()}
+                                        renderItem={({item}) => (
+                                            <View style={styles.trendRow}>
+                                                <Text style={styles.trendRank}>{item.rank}</Text>
+                                                <Text style={styles.trendTitle}>{item.title}</Text>
+                                                {typeof item.change === 'number' && item.change > 0 && (
+                                                    <Text style={styles.trendChange}>↑{item.change}</Text>
+                                                )}
+                                                {item.change === 'NEW' && <Text style={styles.trendNew}>NEW</Text>}
+                                            </View>
+                                        )}
+                                        scrollEnabled={false}
+                                        ItemSeparatorComponent={() => <View/>}
+                                    />
+                                </>
+                            )}
+                        </Animated.View>
+                        {/* Single rotating arrow, absolute at right center */}
+                        <TouchableOpacity onPress={toggleNews} style={styles.arrowAbsolute}>
+                            <AnimatedIcon
+                                name="chevron-down"
+                                size={20}
+                                color="#666"
+                                style={{
+                                    transform: [
+                                        {
+                                            rotate: rotateAnimNews.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: ['0deg', '180deg'],
+                                            }),
+                                        },
+                                    ],
+                                }}
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* 최신 뉴스 */}
+                    {renderFeedSection(
+                        navigation,
+                        '최신 뉴스',
+                        latestData,
+                        true,
+                        () => navigation.navigate('MoreFeedScreen'),
+                        '추천 뉴스 더보기'
+                    )}
+                </ScrollView>
+            )}
+            {activeTab === '캐치업' && (
+                <ScrollView
+                    style={styles.body}
+                    contentContainerStyle={{flexGrow: 1, paddingBottom: 50}}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* 1. 급상승 뉴스 (캐치업 키워드) */}
+                    <View style={[styles.section, {marginBottom: 16, position: 'relative'}]}>
+                        <Animated.View style={{height: heightAnimCatchup, overflow: 'hidden'}}>
+                            {collapsedCatchup ? (
+                                <View style={styles.tickerRow}>
+                                    {/* existing catchup tickerRow contents */}
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>실시간</Text>
+                                    </View>
+                                    <ScrollView
+                                        ref={scrollRef}
+                                        style={styles.tickerWrapper}
+                                        scrollEnabled={false}
+                                        showsVerticalScrollIndicator={false}
+                                    >
+                                        {scrollDataCatchup.map((item, idx) => (
+                                            <View key={idx} style={styles.tickerItem}>
+                                                <Text style={styles.trendRank}>{item.rank}.</Text>
+                                                <Text style={styles.trendTitle}>{item.title}</Text>
+                                            </View>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            ) : (
+                                <>
+                                    <View style={styles.sectionHeader}>
+                                        <Text style={styles.sectionTitle}>급상승 뉴스</Text>
+                                    </View>
+                                    <FlatList
+                                        data={sampleCatchupTrendingData}
+                                        keyExtractor={item => item.rank.toString()}
+                                        renderItem={({item}) => (
+                                            <View style={styles.trendRow}>
+                                                <Text style={styles.trendRank}>{item.rank}</Text>
+                                                <Text style={styles.trendTitle}>{item.title}</Text>
+                                                {typeof item.change === 'number' && item.change > 0 && (
+                                                    <Text style={styles.trendChange}>↑{item.change}</Text>
+                                                )}
+                                                {item.change === 'NEW' && <Text style={styles.trendNew}>NEW</Text>}
+                                            </View>
+                                        )}
+                                        scrollEnabled={false}
+                                        ItemSeparatorComponent={() => <View/>}
+                                    />
+                                </>
+                            )}
+                        </Animated.View>
+                        <TouchableOpacity onPress={toggleCatchup} style={styles.arrowAbsolute}>
+                            <AnimatedIcon
+                                name="chevron-down"
+                                size={20}
+                                color="#666"
+                                style={{
+                                    transform: [
+                                        {
+                                            rotate: rotateAnimCatchup.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: ['0deg', '180deg'],
+                                            }),
+                                        },
+                                    ],
+                                }}
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* 캐치업 피드 섹션 */}
+                    {renderFeedSection(
+                        navigation,
+                        '캐치업',
+                        catchupData,
+                        true,
+                        () => navigation.navigate('Discover'),
+                        '내 캐치업 더보기'
+                    )}
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 };
@@ -535,5 +694,16 @@ const styles = StyleSheet.create({
         width: 95,
         height: 95,
         borderRadius: 8,
-    }
+    },
+    catchupContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+        backgroundColor: '#fff',
+    },
+    catchupText: {
+        fontSize: 18,
+        color: '#666',
+    },
 });
